@@ -38,15 +38,30 @@ class RabbitmqTransport(BaseTransport):
             'ca_certs': self._rabbitmq_config['ssl_cacert'],
             'ssl_version': ssl.PROTOCOL_TLSv1
         }
-        parameters = pika.connection.ConnectionParameters(
-            credentials=credentials,
-            host=self._rabbitmq_config['host'],
-            port=self._rabbitmq_config['port'],
-            ssl=self._rabbitmq_config['ssl'],
-            ssl_options=ssl_options,
-            virtual_host=self._rabbitmq_config['vhost']
-        )
-        self._connection = pika.adapters.BlockingConnection(parameters)
+		
+        connectionOk = False
+        hosts = self._rabbitmq_config['host'].split(';')
+        for current_host in hosts:
+            current_host = current_host.strip()
+            try:
+                parameters = pika.connection.ConnectionParameters(
+                    credentials=credentials,
+                    host=current_host,
+                    port=self._rabbitmq_config['port'],
+                    ssl=self._rabbitmq_config['ssl'],
+                    ssl_options=ssl_options,
+                    virtual_host=self._rabbitmq_config['vhost']
+                )
+                self._connection = pika.adapters.BlockingConnection(parameters)
+                connectionOk = True
+                break
+            except:
+                print "Impossible to connect to host",current_host
+                continue
+            
+        if not connectionOk:
+            return 
+			
         self._channel = self._connection.channel()
 
         # Declare RabbitMQ queue and bindings
